@@ -1,82 +1,109 @@
 {% extends 'base_public.html' %}
 
-{% block title %}Login | College ERP{% endblock %}
+{% block title %}Login | Quadri Institute of Technology{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center align-items-center min-vh-100">
-    <div class="col-12 col-sm-10 col-md-6 col-lg-4">
+<div class="min-vh-100 d-flex align-items-center justify-content-center px-3">
+
+    <div class="w-100" style="max-width: 420px;">
 
         <div class="text-center mb-4">
-            <h2 class="fw-bold text-primary">College ERP</h2>
-            <p class="text-muted">Sign in to your account</p>
+            <div class="mb-3">
+                <i class="bi bi-mortarboard-fill" style="font-size: 2.8rem; color: var(--brand-primary, #1A73E8);"></i>
+            </div>
+            <h1 class="fw-600" style="font-size: 22px; color: var(--text-body);">
+                Quadri Institute of Technology
+            </h1>
+            <p style="font-size: 14px; color: var(--text-muted-custom);">
+                Sign in to your account
+            </p>
         </div>
 
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
+        {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss mb-3" role="alert">
+            <i class="bi bi-info-circle me-1"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
 
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
-                    {% endfor %}
-                {% endif %}
+        <div class="public-card p-4">
 
-                {% if form.non_field_errors %}
-                    <div class="alert alert-danger">
-                        {% for error in form.non_field_errors %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger alert-dismissible fade show auto-dismiss" role="alert">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endif %}
 
-                <form method="post" novalidate>
-                    {% csrf_token %}
+            <form method="post" novalidate>
+                {% csrf_token %}
 
-                    <div class="mb-3">
-                        <label for="{{ form.username.id_for_label }}" class="form-label fw-semibold">Username</label>
-                        <input
-                            type="text"
-                            name="{{ form.username.html_name }}"
-                            id="{{ form.username.id_for_label }}"
-                            class="form-control {% if form.username.errors %}is-invalid{% endif %}"
-                            placeholder="Enter your username"
-                            value="{{ form.username.value|default:'' }}"
-                            autofocus
-                        >
-                        {% if form.username.errors %}
-                            <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
-                        {% endif %}
-                    </div>
+                <div class="mb-3">
+                    <label for="{{ form.username.id_for_label }}" class="form-label fw-500"
+                        style="font-size: 14px; font-weight: 500;">
+                        Username <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}"
+                        class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                        placeholder="Enter your username" value="{{ form.username.value|default:'' }}" autofocus>
+                    {% if form.username.errors %}
+                    <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+                    {% endif %}
+                </div>
 
-                    <div class="mb-4">
-                        <label for="{{ form.password.id_for_label }}" class="form-label fw-semibold">Password</label>
-                        <input
-                            type="password"
-                            name="{{ form.password.html_name }}"
+                <div class="mb-4">
+                    <label for="{{ form.password.id_for_label }}" class="form-label"
+                        style="font-size: 14px; font-weight: 500;">
+                        Password <span class="text-danger">*</span>
+                    </label>
+                    <div class="input-group">
+                        <input type="password" name="{{ form.password.html_name }}"
                             id="{{ form.password.id_for_label }}"
                             class="form-control {% if form.password.errors %}is-invalid{% endif %}"
-                            placeholder="Enter your password"
-                        >
+                            placeholder="Enter your password">
+                        <button class="btn btn-outline-secondary" type="button" id="toggle-password"
+                            title="Show/hide password">
+                            <i class="bi bi-eye" id="toggle-icon"></i>
+                        </button>
                         {% if form.password.errors %}
-                            <div class="invalid-feedback">{{ form.password.errors.0 }}</div>
+                        <div class="invalid-feedback">{{ form.password.errors.0 }}</div>
                         {% endif %}
                     </div>
+                </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
-                    </div>
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-brand btn-lg">
+                        <i class="bi bi-box-arrow-in-right me-1"></i>Sign In
+                    </button>
+                </div>
 
-                </form>
+            </form>
 
-            </div>
         </div>
 
-        <p class="text-center text-muted mt-3 small">
-            College ERP System &copy; 2024
+        <p class="text-center mt-4" style="font-size: 12px; color: var(--text-muted-custom);">
+            Quadri Institute of Technology ERP &copy; 2026
         </p>
 
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.getElementById('toggle-password').addEventListener('click', function () {
+        var input = document.getElementById('{{ form.password.id_for_label }}');
+        var icon = document.getElementById('toggle-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    });
+</script>
 {% endblock %}

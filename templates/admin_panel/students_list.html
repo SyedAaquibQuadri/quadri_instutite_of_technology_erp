@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block title %}Students — QIT ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="page-title mb-1">Students</h1>
+        <p class="text-muted mb-0">All enrolled students across all courses.</p>
+    </div>
+    <a href="{% url 'admin_panel:student_add' %}" class="btn btn-primary">
+        <i class="bi bi-person-plus me-1"></i> Add Student
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
+            <span class="text-muted small">{{ students.count }} student{{ students.count|pluralize }} found</span>
+            <form method="get" class="d-flex gap-2">
+                <input type="text" name="q" value="{{ query }}" placeholder="Search by name or roll no..."
+                    class="form-control form-control-sm" style="width: 260px;">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+                {% if query %}
+                <a href="{% url 'admin_panel:students_list' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if students %}
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0">
+                <thead>
+                    <tr>
+                        <th>Roll No</th>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Course</th>
+                        <th>Semester</th>
+                        <th>Batch</th>
+                        <th>Status</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sp in students %}
+                    <tr>
+                        <td><span class="fw-500">{{ sp.roll_no }}</span></td>
+                        <td>{{ sp.user.get_full_name|default:sp.user.username }}</td>
+                        <td class="text-muted">{{ sp.user.username }}</td>
+                        <td>{{ sp.course|default:"—" }}</td>
+                        <td>{{ sp.current_semester }}</td>
+                        <td>{{ sp.batch_year }}</td>
+                        <td>
+                            {% if sp.user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="#" class="btn btn-sm btn-outline-primary me-1" title="View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="#" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-people" style="font-size: 2.5rem;"></i>
+            <p class="mt-2 mb-0">No students found.</p>
+            {% if query %}
+            <small>Try a different search term.</small>
+            {% else %}
+            <a href="{% url 'admin_panel:student_add' %}" class="btn btn-sm btn-primary mt-3">Add First Student</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

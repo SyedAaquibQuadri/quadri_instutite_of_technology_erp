@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Student — QIT ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="page-title mb-1">Add New Student</h1>
+        <p class="text-muted mb-0">Create student login account and profile in one step.</p>
+    </div>
+    <a href="{% url 'admin_panel:students_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Students
+    </a>
+</div>
+
+<div class="card p-4">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <h5 class="section-heading mb-3">
+            <i class="bi bi-person-circle me-2"></i>Account Information
+        </h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                <div class="invalid-feedback d-block">{{ form.first_name.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                <div class="invalid-feedback d-block">{{ form.last_name.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Username <span class="text-danger">*</span></label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                <div class="invalid-feedback d-block">{{ form.username.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{{ form.email.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}
+                <div class="invalid-feedback d-block">{{ form.phone.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Profile Picture</label>
+                {{ form.profile_pic }}
+                {% if form.profile_pic.errors %}
+                <div class="invalid-feedback d-block">{{ form.profile_pic.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Password <span class="text-danger">*</span></label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                <div class="invalid-feedback d-block">{{ form.password1.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Confirm Password <span class="text-danger">*</span></label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                <div class="invalid-feedback d-block">{{ form.password2.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h5 class="section-heading mb-3">
+            <i class="bi bi-mortarboard me-2"></i>Academic Profile
+        </h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label">Roll Number <span class="text-danger">*</span></label>
+                {{ form.roll_no }}
+                {% if form.roll_no.errors %}
+                <div class="invalid-feedback d-block">{{ form.roll_no.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Course <span class="text-danger">*</span></label>
+                {{ form.course }}
+                {% if form.course.errors %}
+                <div class="invalid-feedback d-block">{{ form.course.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Semester <span class="text-danger">*</span></label>
+                {{ form.current_semester }}
+                {% if form.current_semester.errors %}
+                <div class="invalid-feedback d-block">{{ form.current_semester.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Batch Year <span class="text-danger">*</span></label>
+                {{ form.batch_year }}
+                {% if form.batch_year.errors %}
+                <div class="invalid-feedback d-block">{{ form.batch_year.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Address</label>
+                {{ form.address }}
+                {% if form.address.errors %}
+                <div class="invalid-feedback d-block">{{ form.address.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Guardian Name</label>
+                {{ form.guardian_name }}
+                {% if form.guardian_name.errors %}
+                <div class="invalid-feedback d-block">{{ form.guardian_name.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Guardian Phone</label>
+                {{ form.guardian_phone }}
+                {% if form.guardian_phone.errors %}
+                <div class="invalid-feedback d-block">{{ form.guardian_phone.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'admin_panel:students_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-person-plus me-1"></i> Create Student
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

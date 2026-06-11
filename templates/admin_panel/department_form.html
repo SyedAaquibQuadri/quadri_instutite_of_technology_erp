@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ form_title }} — Quadri Institute ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4 gap-2">
+    <a href="{% url 'admin_panel:academics_overview' %}"
+        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+        <i class="bi bi-arrow-left" style="font-size:13px;"></i> Back
+    </a>
+    <div>
+        <h1 class="page-title mb-0">{{ form_title }}</h1>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="card">
+            <div class="card-header py-3" style="border-bottom: 1px solid var(--border-color);">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-building" style="color: var(--brand-blue); font-size:18px;"></i>
+                    <h5 class="mb-0 fw-600">Department Details</h5>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label fw-500" style="font-size:14px;">
+                            Department Name <span style="color: var(--danger);">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="invalid-feedback d-block" style="font-size:13px;">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.code.id_for_label }}" class="form-label fw-500" style="font-size:14px;">
+                            Department Code <span style="color: var(--danger);">*</span>
+                        </label>
+                        {{ form.code }}
+                        <div class="form-text" style="font-size:12px;">Short unique identifier, e.g. CS, ECE, MECH. Will
+                            be saved in uppercase.</div>
+                        {% if form.code.errors %}
+                        <div class="invalid-feedback d-block" style="font-size:13px;">{{ form.code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.head_of_dept.id_for_label }}" class="form-label fw-500"
+                            style="font-size:14px;">
+                            Head of Department
+                        </label>
+                        {{ form.head_of_dept }}
+                        <div class="form-text" style="font-size:12px;">Optional. Only active teachers are listed.</div>
+                        {% if form.head_of_dept.errors %}
+                        <div class="invalid-feedback d-block" style="font-size:13px;">{{ form.head_of_dept.errors.0 }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex align-items-center gap-3 pt-2"
+                        style="border-top: 1px solid var(--border-color);">
+                        <button type="submit" class="btn btn-primary fw-500">
+                            <i class="bi bi-check-lg me-1"></i> {{ submit_label }}
+                        </button>
+                        <a href="{% url 'admin_panel:academics_overview' %}"
+                            class="btn btn-link text-muted text-decoration-none fw-500" style="font-size:14px;">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.auto-dismiss').forEach(function (alert) {
+            setTimeout(function () {
+                bootstrap.Alert.getOrCreateInstance(alert).close();
+            }, 4000);
+        });
+    });
+</script>
+{% endblock %}

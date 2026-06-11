@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}Academics — Quadri Institute ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="page-title mb-1">Academics</h1>
+        <p class="text-muted mb-0" style="font-size:14px;">Manage departments and courses</p>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+    <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'error' or message.tags == 'danger' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %} me-2"></i>
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- DEPARTMENTS SECTION -->
+<div class="card mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between py-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-building fs-5" style="color: var(--brand-blue);"></i>
+            <h5 class="mb-0 fw-600">Departments</h5>
+            <span class="badge rounded-pill" style="background: var(--brand-light); color: var(--brand-blue); font-size:12px;">{{ departments|length }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <form method="get" class="d-flex gap-2" id="dept-search-form">
+                <input type="hidden" name="course_search" value="{{ course_search }}">
+                <input type="text" name="dept_search" value="{{ dept_search }}" placeholder="Search departments..."
+                    class="form-control form-control-sm" style="width: 200px;"
+                    oninput="document.getElementById('dept-search-form').submit()">
+            </form>
+            <a href="{% url 'admin_panel:department_add' %}" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i> Add Department
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if departments %}
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0 align-middle">
+                <thead>
+                    <tr style="background: var(--page-bg);">
+                        <th class="ps-3" style="font-size:13px; font-weight:600; color: var(--muted-text);">#</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">DEPARTMENT NAME</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">CODE</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">HEAD OF DEPARTMENT</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">COURSES</th>
+                        <th class="text-end pe-3" style="font-size:13px; font-weight:600; color: var(--muted-text);">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in departments %}
+                    <tr>
+                        <td class="ps-3 text-muted" style="font-size:13px;">{{ forloop.counter }}</td>
+                        <td><span class="fw-500" style="font-size:14px;">{{ dept.name }}</span></td>
+                        <td>
+                            <span class="badge" style="background: var(--brand-light); color: var(--brand-blue); font-weight:600; font-size:12px; letter-spacing:0.5px;">{{ dept.code }}</span>
+                        </td>
+                        <td style="font-size:14px;">
+                            {% if dept.head_of_dept %}
+                            <div class="d-flex align-items-center gap-2">
+                                {% if dept.head_of_dept.profile_pic %}
+                                <img src="{{ dept.head_of_dept.profile_pic.url }}" alt="" class="rounded-circle" style="width:28px;height:28px;object-fit:cover;">
+                                {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:28px;height:28px;background:var(--brand-light);color:var(--brand-blue);font-size:11px;font-weight:600;">
+                                    {{ dept.head_of_dept.first_name|first }}{{ dept.head_of_dept.last_name|first }}
+                                </div>
+                                {% endif %}
+                                <span>{{ dept.head_of_dept.get_full_name }}</span>
+                            </div>
+                            {% else %}
+                            <span class="text-muted fst-italic" style="font-size:13px;">Not assigned</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary fw-500" style="font-size:12px;">
+                                {{ dept.course_set.count }} course{{ dept.course_set.count|pluralize }}
+                            </span>
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'admin_panel:department_edit' dept.pk %}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="Edit">
+                                    <i class="bi bi-pencil" style="font-size:12px;"></i> Edit
+                                </a>
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                    data-name="{{ dept.name }}"
+                                    data-url="{% url 'admin_panel:department_delete' dept.pk %}"
+                                    onclick="confirmDelete(this.dataset.name, this.dataset.url)" title="Delete">
+                                    <i class="bi bi-trash" style="font-size:12px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-building" style="font-size:40px; color: var(--border-color);"></i>
+            <p class="text-muted mt-3 mb-1" style="font-size:15px;">No departments found</p>
+            {% if dept_search %}
+            <p class="text-muted" style="font-size:13px;">No results for "{{ dept_search }}"</p>
+            {% else %}
+            <a href="{% url 'admin_panel:department_add' %}" class="btn btn-primary btn-sm mt-2">Add your first department</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- COURSES SECTION -->
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between py-3">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-journal-bookmark fs-5" style="color: var(--brand-blue);"></i>
+            <h5 class="mb-0 fw-600">Courses</h5>
+            <span class="badge rounded-pill" style="background: var(--brand-light); color: var(--brand-blue); font-size:12px;">{{ courses|length }}</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <form method="get" class="d-flex gap-2" id="course-search-form">
+                <input type="hidden" name="dept_search" value="{{ dept_search }}">
+                <input type="text" name="course_search" value="{{ course_search }}" placeholder="Search courses..."
+                    class="form-control form-control-sm" style="width: 200px;"
+                    oninput="document.getElementById('course-search-form').submit()">
+            </form>
+            <a href="{% url 'admin_panel:course_add' %}" class="btn btn-sm btn-primary d-flex align-items-center gap-1">
+                <i class="bi bi-plus-lg"></i> Add Course
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if courses %}
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0 align-middle">
+                <thead>
+                    <tr style="background: var(--page-bg);">
+                        <th class="ps-3" style="font-size:13px; font-weight:600; color: var(--muted-text);">#</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">COURSE NAME</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">CODE</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">DEPARTMENT</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">DURATION</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">SEMESTERS</th>
+                        <th class="text-end pe-3" style="font-size:13px; font-weight:600; color: var(--muted-text);">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr>
+                        <td class="ps-3 text-muted" style="font-size:13px;">{{ forloop.counter }}</td>
+                        <td><span class="fw-500" style="font-size:14px;">{{ course.name }}</span></td>
+                        <td>
+                            <span class="badge" style="background: var(--brand-light); color: var(--brand-blue); font-weight:600; font-size:12px; letter-spacing:0.5px;">{{ course.code }}</span>
+                        </td>
+                        <td style="font-size:14px;">{{ course.department.name }}</td>
+                        <td style="font-size:14px;">{{ course.duration_years }} yr{{ course.duration_years|pluralize }}</td>
+                        <td style="font-size:14px;">{{ course.total_semesters }}</td>
+                        <td class="text-end pe-3">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'admin_panel:course_edit' course.pk %}" class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="Edit">
+                                    <i class="bi bi-pencil" style="font-size:12px;"></i> Edit
+                                </a>
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                    data-name="{{ course.name }}"
+                                    data-url="{% url 'admin_panel:course_delete' course.pk %}"
+                                    onclick="confirmDelete(this.dataset.name, this.dataset.url)" title="Delete">
+                                    <i class="bi bi-trash" style="font-size:12px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-journal-bookmark" style="font-size:40px; color: var(--border-color);"></i>
+            <p class="text-muted mt-3 mb-1" style="font-size:15px;">No courses found</p>
+            {% if course_search %}
+            <p class="text-muted" style="font-size:13px;">No results for "{{ course_search }}"</p>
+            {% else %}
+            <a href="{% url 'admin_panel:course_add' %}" class="btn btn-primary btn-sm mt-2">Add your first course</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:12px; border: 1px solid var(--border-color);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-600">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted" style="font-size:14px;">Are you sure you want to delete <strong id="delete-object-name"></strong>? This cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <form id="delete-form" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDelete(name, url) {
+        document.getElementById('delete-object-name').textContent = name;
+        document.getElementById('delete-form').action = url;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.auto-dismiss').forEach(function (alert) {
+            setTimeout(function () {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                bsAlert.close();
+            }, 4000);
+        });
+    });
+</script>
+{% endblock %}

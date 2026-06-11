@@ -15,4 +15,11 @@ urlpatterns = [
     path('teachers/<int:pk>/edit/', views.teacher_edit, name='teacher_edit'),
     path('teachers/<int:pk>/deactivate/', views.teacher_deactivate, name='teacher_deactivate'),
     path('teachers/<int:pk>/activate/', views.teacher_activate, name='teacher_activate'),
+    path('academics/', views.academics_overview, name='academics_overview'),
+    path('academics/departments/add/', views.department_add, name='department_add'),
+    path('academics/departments/<int:pk>/edit/', views.department_edit, name='department_edit'),
+    path('academics/departments/<int:pk>/delete/', views.department_delete, name='department_delete'),
+    path('academics/courses/add/', views.course_add, name='course_add'),
+    path('academics/courses/<int:pk>/edit/', views.course_edit, name='course_edit'),
+    path('academics/courses/<int:pk>/delete/', views.course_delete, name='course_delete'),
 ]

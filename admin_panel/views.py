@@ -5,8 +5,8 @@ from django.core.paginator import Paginator
 from accounts.decorators import admin_required
 from accounts.forms import StudentCreationForm, StudentEditForm, TeacherCreationForm, TeacherEditForm
 from accounts.models import CustomUser, StudentProfile, TeacherProfile
-from academics.models import Department
-
+from academics.models import Department, Course
+from academics.forms import DepartmentForm, CourseForm
 
 @admin_required
 def dashboard(request):
@@ -289,3 +289,133 @@ def teacher_activate(request, pk):
         tp.user.save()
         messages.success(request, f"Teacher {tp.user.get_full_name() or tp.user.username} has been activated.")
     return redirect('admin_panel:teachers_list')
+
+@admin_required
+def academics_overview(request):
+    departments = Department.objects.select_related('head_of_dept').order_by('name')
+    courses = Course.objects.select_related('department').order_by('department__name', 'name')
+
+    dept_search = request.GET.get('dept_search', '').strip()
+    course_search = request.GET.get('course_search', '').strip()
+
+    if dept_search:
+        departments = departments.filter(name__icontains=dept_search)
+    if course_search:
+        courses = courses.filter(name__icontains=course_search)
+
+    return render(request, 'admin_panel/academics_overview.html', {
+        'departments': departments,
+        'courses': courses,
+        'dept_search': dept_search,
+        'course_search': course_search,
+    })
+
+
+@admin_required
+def department_add(request):
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Department "{form.cleaned_data["name"]}" created successfully.')
+            return redirect('admin_panel:academics_overview')
+    else:
+        form = DepartmentForm()
+    return render(request, 'admin_panel/department_form.html', {
+        'form': form,
+        'form_title': 'Add Department',
+        'submit_label': 'Create Department',
+    })
+
+
+@admin_required
+def department_edit(request, pk):
+    department = get_object_or_404(Department, pk=pk)
+    if request.method == 'POST':
+        form = DepartmentForm(request.POST, instance=department)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Department "{department.name}" updated successfully.')
+            return redirect('admin_panel:academics_overview')
+    else:
+        form = DepartmentForm(instance=department)
+    return render(request, 'admin_panel/department_form.html', {
+        'form': form,
+        'form_title': f'Edit Department — {department.name}',
+        'submit_label': 'Save Changes',
+        'department': department,
+    })
+
+
+@admin_required
+def department_delete(request, pk):
+    department = get_object_or_404(Department, pk=pk)
+    if request.method == 'POST':
+        name = department.name
+        course_count = department.course_set.count()
+        if course_count > 0:
+            messages.error(request, f'Cannot delete "{name}". It has {course_count} course(s) assigned. Remove or reassign them first.')
+            return redirect('admin_panel:academics_overview')
+        department.delete()
+        messages.success(request, f'Department "{name}" deleted successfully.')
+        return redirect('admin_panel:academics_overview')
+    return render(request, 'admin_panel/confirm_delete.html', {
+        'object_name': department.name,
+        'object_type': 'Department',
+        'cancel_url': 'admin_panel:academics_overview',
+    })
+
+
+@admin_required
+def course_add(request):
+    if request.method == 'POST':
+        form = CourseForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Course "{form.cleaned_data["name"]}" created successfully.')
+            return redirect('admin_panel:academics_overview')
+    else:
+        form = CourseForm()
+    return render(request, 'admin_panel/course_form.html', {
+        'form': form,
+        'form_title': 'Add Course',
+        'submit_label': 'Create Course',
+    })
+
+
+@admin_required
+def course_edit(request, pk):
+    course = get_object_or_404(Course, pk=pk)
+    if request.method == 'POST':
+        form = CourseForm(request.POST, instance=course)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Course "{course.name}" updated successfully.')
+            return redirect('admin_panel:academics_overview')
+    else:
+        form = CourseForm(instance=course)
+    return render(request, 'admin_panel/course_form.html', {
+        'form': form,
+        'form_title': f'Edit Course — {course.name}',
+        'submit_label': 'Save Changes',
+        'course': course,
+    })
+
+
+@admin_required
+def course_delete(request, pk):
+    course = get_object_or_404(Course, pk=pk)
+    if request.method == 'POST':
+        name = course.name
+        subject_count = course.subject_set.count()
+        if subject_count > 0:
+            messages.error(request, f'Cannot delete "{name}". It has {subject_count} subject(s) assigned. Remove them first.')
+            return redirect('admin_panel:academics_overview')
+        course.delete()
+        messages.success(request, f'Course "{name}" deleted successfully.')
+        return redirect('admin_panel:academics_overview')
+    return render(request, 'admin_panel/confirm_delete.html', {
+        'object_name': course.name,
+        'object_type': 'Course',
+        'cancel_url': 'admin_panel:academics_overview',
+    })

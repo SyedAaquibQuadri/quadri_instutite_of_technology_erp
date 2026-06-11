@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Teacher — QIT ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="page-title mb-1">Edit Teacher</h1>
+        <p class="text-muted mb-0">
+            {{ tp.user.get_full_name|default:tp.user.username }} &mdash; {{ tp.employee_id }}
+        </p>
+    </div>
+    <a href="{% url 'admin_panel:teachers_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Teachers
+    </a>
+</div>
+
+<div class="card p-4">
+    <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <h5 class="section-heading mb-3">
+            <i class="bi bi-person-circle me-2"></i>Account Information
+        </h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">First Name <span class="text-danger">*</span></label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}<div class="invalid-feedback d-block">{{ form.first_name.errors|join:", "
+                    }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Last Name <span class="text-danger">*</span></label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}<div class="invalid-feedback d-block">{{ form.last_name.errors|join:", "
+                    }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Email <span class="text-danger">*</span></label>
+                {{ form.email }}
+                {% if form.email.errors %}<div class="invalid-feedback d-block">{{ form.email.errors|join:", " }}</div>
+                {% endif %}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Phone</label>
+                {{ form.phone }}
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Profile Picture</label>
+                {{ form.profile_pic }}
+                {% if tp.user.profile_pic %}
+                <small class="text-muted d-block mt-1">Current: <a href="{{ tp.user.profile_pic.url }}"
+                        target="_blank">View</a></small>
+                {% endif %}
+            </div>
+            <div class="col-md-6 d-flex align-items-center pt-4">
+                <div class="form-check">
+                    {{ form.is_active }}
+                    <label class="form-check-label ms-2">Account Active</label>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-4">
+
+        <h5 class="section-heading mb-3">
+            <i class="bi bi-briefcase me-2"></i>Professional Profile
+        </h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label">Employee ID <span class="text-danger">*</span></label>
+                {{ form.employee_id }}
+                {% if form.employee_id.errors %}<div class="invalid-feedback d-block">{{ form.employee_id.errors|join:",
+                    " }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Department <span class="text-danger">*</span></label>
+                {{ form.department }}
+                {% if form.department.errors %}<div class="invalid-feedback d-block">{{ form.department.errors|join:", "
+                    }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Designation</label>
+                {{ form.designation }}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Joining Date</label>
+                {{ form.joining_date }}
+            </div>
+            <div class="col-md-8">
+                <label class="form-label">Qualification</label>
+                {{ form.qualification }}
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'admin_panel:teachers_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+            <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-save me-1"></i> Save Changes
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -6,7 +6,7 @@
 <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
         <h1 class="page-title mb-1">Students</h1>
-        <p class="text-muted mb-0">All enrolled students across all courses.</p>
+        <p class="text-muted mb-0">{{ total }} student{{ total|pluralize }} enrolled.</p>
     </div>
     <a href="{% url 'admin_panel:student_add' %}" class="btn btn-primary">
         <i class="bi bi-person-plus me-1"></i> Add Student
@@ -16,9 +16,11 @@
 <div class="card">
     <div class="card-body p-0">
         <div class="d-flex align-items-center justify-content-between p-3 border-bottom">
-            <span class="text-muted small">{{ students.count }} student{{ students.count|pluralize }} found</span>
+            <span class="text-muted small">
+                Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total }}
+            </span>
             <form method="get" class="d-flex gap-2">
-                <input type="text" name="q" value="{{ query }}" placeholder="Search by name or roll no..."
+                <input type="text" name="q" value="{{ query }}" placeholder="Search name or roll no..."
                     class="form-control form-control-sm" style="width: 260px;">
                 <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
                 {% if query %}
@@ -27,7 +29,7 @@
             </form>
         </div>
 
-        {% if students %}
+        {% if page_obj.object_list %}
         <div class="table-responsive">
             <table class="table table-hover table-bordered mb-0">
                 <thead>
@@ -43,7 +45,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for sp in students %}
+                    {% for sp in page_obj %}
                     <tr>
                         <td><span class="fw-500">{{ sp.roll_no }}</span></td>
                         <td>{{ sp.user.get_full_name|default:sp.user.username }}</td>
@@ -59,18 +61,70 @@
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            <a href="#" class="btn btn-sm btn-outline-primary me-1" title="View">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            <a href="#" class="btn btn-sm btn-outline-secondary" title="Edit">
+                            <a href="{% url 'admin_panel:student_edit' sp.pk %}"
+                                class="btn btn-sm btn-outline-primary me-1" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            {% if sp.user.is_active %}
+                            <form method="post" action="{% url 'admin_panel:student_deactivate' sp.pk %}"
+                                class="d-inline"
+                                onsubmit="return confirm('Deactivate {{ sp.user.get_full_name|default:sp.user.username }}?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate">
+                                    <i class="bi bi-person-x"></i>
+                                </button>
+                            </form>
+                            {% else %}
+                            <form method="post" action="{% url 'admin_panel:student_activate' sp.pk %}" class="d-inline"
+                                onsubmit="return confirm('Activate {{ sp.user.get_full_name|default:sp.user.username }}?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activate">
+                                    <i class="bi bi-person-check"></i>
+                                </button>
+                            </form>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="d-flex justify-content-center py-3">
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                            href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %} <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                        {% endfor %}
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                                href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+
         {% else %}
         <div class="text-center py-5 text-muted">
             <i class="bi bi-people" style="font-size: 2.5rem;"></i>

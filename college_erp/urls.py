@@ -20,11 +20,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('accounts/', include('accounts.urls')),
-    path('admin-panel/', include('admin_panel.urls')),
+    path('django-admin/', admin.site.urls),
+    path('accounts/', include('accounts.urls', namespace='accounts')),
+    path('admin-panel/', include('admin_panel.urls', namespace='admin_panel')),
     path('academics/', include('academics.urls')),
-    path('attendance/', include('attendance.urls')),
+    path('attendance/', include('attendance.urls', namespace='attendance')),
+    path('teacher/attendance/', include('attendance.urls', namespace='teacher_attendance')),
     path('results/', include('results.urls')),
     path('fees/', include('fees.urls')),
     path('library/', include('library.urls')),

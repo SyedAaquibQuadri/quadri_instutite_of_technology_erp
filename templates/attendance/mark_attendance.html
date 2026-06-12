@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+
+{% block title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1 fw-600">Mark Attendance</h4>
+        <p class="text-muted mb-0">Select a subject and date to mark attendance</p>
+    </div>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- Step 1: Subject and Date Selection -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h6 class="fw-600 mb-3">
+            <i class="bi bi-filter me-2 text-primary"></i>Select Subject and Date
+        </h6>
+        <form method="post">
+            {% csrf_token %}
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label fw-500">
+                        Subject <span class="text-danger">*</span>
+                    </label>
+                    {{ selection_form.subject }}
+                    {% if selection_form.subject.errors %}
+                    <div class="invalid-feedback d-block">{{ selection_form.subject.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-500">
+                        Date <span class="text-danger">*</span>
+                    </label>
+                    {{ selection_form.date }}
+                    {% if selection_form.date.errors %}
+                    <div class="invalid-feedback d-block">{{ selection_form.date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" name="load_students" class="btn btn-primary w-100">
+                        <i class="bi bi-people me-2"></i>Load Students
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Step 2: Student Attendance Table -->
+{% if subject %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="mb-0 fw-600">
+                <i class="bi bi-clipboard-check me-2 text-primary"></i>
+                {{ subject.name }} — {{ subject.code }}
+            </h6>
+            <small class="text-muted">
+                {{ subject.course.name }} | Semester {{ subject.semester }} | Date: {{ date }}
+            </small>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-success" id="markAllPresent">
+                <i class="bi bi-check-all me-1"></i>All Present
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" id="markAllAbsent">
+                <i class="bi bi-x-circle me-1"></i>All Absent
+            </button>
+        </div>
+    </div>
+
+    {% if students %}
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="subject_id" value="{{ subject.id }}">
+        <input type="hidden" name="date" value="{{ date }}">
+
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0">
+                <thead>
+                    <tr style="background-color: var(--bs-gray-100);">
+                        <th style="width:60px;">#</th>
+                        <th>Roll No</th>
+                        <th>Student Name</th>
+                        <th class="text-center">Present</th>
+                        <th class="text-center">Absent</th>
+                        <th class="text-center">Late</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr class="attendance-row" data-student-id="{{ student.id }}">
+                        <td class="text-muted">{{ forloop.counter }}</td>
+                        <td class="fw-500">{{ student.studentprofile.roll_no }}</td>
+                        <td>{{ student.get_full_name }}</td>
+
+                        <!-- Present Radio -->
+                        <td class="text-center">
+                            <input type="radio" class="form-check-input attendance-radio" name="status_{{ student.id }}"
+                                value="Present" {% if student.attendance_status == 'Present' %}checked{% endif %}>
+                        </td>
+
+                        <!-- Absent Radio -->
+                        <td class="text-center">
+                            <input type="radio" class="form-check-input attendance-radio" name="status_{{ student.id }}"
+                                value="Absent" {% if student.attendance_status == 'Absent' %}checked{% endif %}>
+                        </td>
+
+                        <!-- Late Radio -->
+                        <td class="text-center">
+                            <input type="radio" class="form-check-input attendance-radio" name="status_{{ student.id }}"
+                                value="Late" {% if student.attendance_status == 'Late' %}checked{% endif %}>
+                        </td>
+
+                        <!-- Badge Status (This part was already correct) -->
+                        <td>
+                            <span class="badge
+            {% if student.attendance_status == 'Present' %}bg-success
+            {% elif student.attendance_status == 'Absent' %}bg-danger
+            {% elif student.attendance_status == 'Late' %}bg-warning text-dark
+            {% endif %}">
+                                {{ student.attendance_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <span class="text-muted">
+                <i class="bi bi-info-circle me-1"></i>
+                Total Students: {{ students|length }}
+            </span>
+            <button type="submit" name="submit_attendance" class="btn btn-primary px-4">
+                <i class="bi bi-check-circle me-2"></i>Save Attendance
+            </button>
+        </div>
+    </form>
+
+    {% else %}
+    <div class="card-body text-center py-5">
+        <i class="bi bi-people display-4 text-muted"></i>
+        <p class="text-muted mt-3">No students enrolled for this subject and semester.</p>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+<script>
+    document.getElementById('markAllPresent') && document.getElementById('markAllPresent').addEventListener('click', function () {
+        document.querySelectorAll('input[type="radio"][value="Present"]').forEach(function (radio) {
+            radio.checked = true;
+            updateBadge(radio);
+        });
+    });
+
+    document.getElementById('markAllAbsent') && document.getElementById('markAllAbsent').addEventListener('click', function () {
+        document.querySelectorAll('input[type="radio"][value="Absent"]').forEach(function (radio) {
+            radio.checked = true;
+            updateBadge(radio);
+        });
+    });
+
+    document.querySelectorAll('.attendance-radio').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            updateBadge(this);
+        });
+    });
+
+    function updateBadge(radio) {
+        var row = radio.closest('tr');
+        var badge = row.querySelector('.badge');
+        var status = radio.value;
+        badge.className = 'badge';
+        if (status === 'Present') {
+            badge.classList.add('bg-success');
+        } else if (status === 'Absent') {
+            badge.classList.add('bg-danger');
+        } else if (status === 'Late') {
+            badge.classList.add('bg-warning', 'text-dark');
+        }
+        badge.textContent = status;
+    }
+</script>
+{% endblock %}

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Department, Course
+from .models import Department, Course, Subject
 from accounts.models import CustomUser
 
 
@@ -76,4 +76,46 @@ class CourseForm(forms.ModelForm):
         if duration and semesters:
             if semesters != duration * 2:
                 pass
+        return cleaned
+    
+class SubjectForm(forms.ModelForm):
+    class Meta:
+        model = Subject
+        fields = ['name', 'code', 'course', 'semester', 'credits', 'teacher']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. Data Structures'}),
+            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. CS301'}),
+            'course': forms.Select(attrs={'class': 'form-select', 'id': 'id_course'}),
+            'semester': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 12}),
+            'credits': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 6}),
+            'teacher': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.instance_pk = kwargs.get('instance').pk if kwargs.get('instance') else None
+        super().__init__(*args, **kwargs)
+        self.fields['course'].queryset = Course.objects.select_related('department').order_by('department__name', 'name')
+        self.fields['course'].empty_label = '-- Select Course --'
+        self.fields['teacher'].queryset = CustomUser.objects.filter(role='teacher', is_active=True).order_by('first_name', 'last_name')
+        self.fields['teacher'].empty_label = '-- Select Teacher --'
+        self.fields['teacher'].required = False
+
+    def clean_code(self):
+        code = self.cleaned_data.get('code', '').upper().strip()
+        qs = Subject.objects.filter(code__iexact=code)
+        if self.instance_pk:
+            qs = qs.exclude(pk=self.instance_pk)
+        if qs.exists():
+            raise forms.ValidationError('A subject with this code already exists.')
+        return code
+
+    def clean(self):
+        cleaned = super().clean()
+        course = cleaned.get('course')
+        semester = cleaned.get('semester')
+        if course and semester:
+            if semester > course.total_semesters:
+                raise forms.ValidationError(
+                    f'Semester {semester} exceeds the total semesters ({course.total_semesters}) for the selected course.'
+                )
         return cleaned

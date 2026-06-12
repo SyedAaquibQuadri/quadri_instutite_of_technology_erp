@@ -22,4 +22,8 @@ urlpatterns = [
     path('academics/courses/add/', views.course_add, name='course_add'),
     path('academics/courses/<int:pk>/edit/', views.course_edit, name='course_edit'),
     path('academics/courses/<int:pk>/delete/', views.course_delete, name='course_delete'),
+    path('academics/subjects/', views.subjects_list, name='subjects_list'),
+    path('academics/subjects/add/', views.subject_add, name='subject_add'),
+    path('academics/subjects/<int:pk>/edit/', views.subject_edit, name='subject_edit'),
+    path('academics/subjects/<int:pk>/delete/', views.subject_delete, name='subject_delete'),
 ]

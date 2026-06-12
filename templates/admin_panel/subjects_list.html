@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+
+{% block title %}Subjects — Quadri Institute ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="page-title mb-1">Subjects</h1>
+        <p class="text-muted mb-0" style="font-size:14px;">Manage subjects and teacher assignments</p>
+    </div>
+    <a href="{% url 'admin_panel:subject_add' %}" class="btn btn-primary d-flex align-items-center gap-2">
+        <i class="bi bi-plus-lg"></i> Add Subject
+    </a>
+</div>
+
+{% if messages %}
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+    <i
+        class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'error' or message.tags == 'danger' %}bi-exclamation-circle-fill{% else %}bi-info-circle-fill{% endif %} me-2"></i>
+    {{ message }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- FILTERS -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-500" style="font-size:13px;">Search</label>
+                <input type="text" name="search" value="{{ search }}" placeholder="Search by subject name or code..."
+                    class="form-control form-control-sm">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label fw-500" style="font-size:13px;">Filter by Course</label>
+                <select name="course_filter" class="form-select form-select-sm">
+                    <option value="">All Courses</option>
+                    {% for choice in course_choices %}
+                    <option value="{{ choice.course.pk }}" {% if choice.is_selected %}selected{% endif %}>
+                        {{ choice.course.department.name }} — {{ choice.course.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+                <a href="{% url 'admin_panel:subjects_list' %}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RESULTS SUMMARY -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <p class="text-muted mb-0" style="font-size:13px;">
+        Showing {{ total_count }} subject{{ total_count|pluralize }}
+        {% if search %}matching "{{ search }}"{% endif %}
+        {% if course_filter %}in selected course{% endif %}
+    </p>
+</div>
+
+{% if grouped_list %}
+{% for group in grouped_list %}
+<div class="card mb-3">
+    <div class="card-header py-3 d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <i class="bi bi-journal-bookmark" style="color: var(--brand-blue);"></i>
+            <div>
+                <span class="fw-600" style="font-size:15px;">{{ group.course.name }}</span>
+                <span class="text-muted ms-2" style="font-size:12px;">{{ group.course.department.name }}</span>
+            </div>
+            <span class="badge rounded-pill"
+                style="background: var(--brand-light); color: var(--brand-blue); font-size:12px;">
+                {{ group.subjects|length }} subject{{ group.subjects|length|pluralize }}
+            </span>
+        </div>
+        <a href="{% url 'admin_panel:subject_add' %}?course={{ group.course.pk }}"
+            class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
+            <i class="bi bi-plus-lg" style="font-size:12px;"></i> Add to this course
+        </a>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-bordered mb-0 align-middle">
+                <thead>
+                    <tr style="background: var(--page-bg);">
+                        <th class="ps-3" style="font-size:13px; font-weight:600; color: var(--muted-text);">#</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">SUBJECT NAME</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">CODE</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">SEMESTER</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">CREDITS</th>
+                        <th style="font-size:13px; font-weight:600; color: var(--muted-text);">ASSIGNED TEACHER</th>
+                        <th class="text-end pe-3" style="font-size:13px; font-weight:600; color: var(--muted-text);">
+                            ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for subject in group.subjects %}
+                    <tr>
+                        <td class="ps-3 text-muted" style="font-size:13px;">{{ forloop.counter }}</td>
+                        <td><span class="fw-500" style="font-size:14px;">{{ subject.name }}</span></td>
+                        <td>
+                            <span class="badge"
+                                style="background: var(--brand-light); color: var(--brand-blue); font-weight:600; font-size:12px; letter-spacing:0.5px;">{{
+                                subject.code }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary fw-500"
+                                style="font-size:12px;">
+                                Sem {{ subject.semester }}
+                            </span>
+                        </td>
+                        <td style="font-size:14px;">{{ subject.credits }} cr</td>
+                        <td style="font-size:14px;">
+                            {% if subject.teacher %}
+                            <div class="d-flex align-items-center gap-2">
+                                {% if subject.teacher.profile_pic %}
+                                <img src="{{ subject.teacher.profile_pic.url }}" alt="" class="rounded-circle"
+                                    style="width:28px;height:28px;object-fit:cover;">
+                                {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                    style="width:28px;height:28px;background:var(--brand-light);color:var(--brand-blue);font-size:11px;font-weight:600;">
+                                    {{ subject.teacher.first_name|first }}{{ subject.teacher.last_name|first }}
+                                </div>
+                                {% endif %}
+                                <span>{{ subject.teacher.get_full_name }}</span>
+                            </div>
+                            {% else %}
+                            <span class="badge bg-warning bg-opacity-10 text-warning fw-500" style="font-size:12px;">
+                                <i class="bi bi-exclamation-triangle me-1"></i> Unassigned
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-3">
+                            <div class="d-flex justify-content-end gap-1">
+                                <a href="{% url 'admin_panel:subject_edit' subject.pk %}"
+                                    class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1" title="Edit">
+                                    <i class="bi bi-pencil" style="font-size:12px;"></i> Edit
+                                </a>
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                    data-name="{{ subject.name }}"
+                                    data-url="{% url 'admin_panel:subject_delete' subject.pk %}"
+                                    onclick="confirmDelete(this.dataset.name, this.dataset.url)" title="Delete">
+                                    <i class="bi bi-trash" style="font-size:12px;"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <i class="bi bi-book" style="font-size:40px; color: var(--border-color);"></i>
+        <p class="text-muted mt-3 mb-1" style="font-size:15px;">No subjects found</p>
+        {% if search or course_filter %}
+        <p class="text-muted" style="font-size:13px;">Try clearing the filters</p>
+        <a href="{% url 'admin_panel:subjects_list' %}" class="btn btn-outline-secondary btn-sm mt-2">Clear filters</a>
+        {% else %}
+        <a href="{% url 'admin_panel:subject_add' %}" class="btn btn-primary btn-sm mt-2">Add your first subject</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:12px; border: 1px solid var(--border-color);">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-600">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="text-muted" style="font-size:14px;">Are you sure you want to delete <strong
+                        id="delete-object-name"></strong>? This cannot be undone.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <form id="delete-form" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDelete(name, url) {
+        document.getElementById('delete-object-name').textContent = name;
+        document.getElementById('delete-form').action = url;
+        new bootstrap.Modal(document.getElementById('deleteModal')).show();
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.auto-dismiss').forEach(function (alert) {
+            setTimeout(function () {
+                bootstrap.Alert.getOrCreateInstance(alert).close();
+            }, 4000);
+        });
+    });
+</script>
+{% endblock %}

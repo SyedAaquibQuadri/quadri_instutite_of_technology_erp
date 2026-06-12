@@ -5,8 +5,8 @@ from django.core.paginator import Paginator
 from accounts.decorators import admin_required
 from accounts.forms import StudentCreationForm, StudentEditForm, TeacherCreationForm, TeacherEditForm
 from accounts.models import CustomUser, StudentProfile, TeacherProfile
-from academics.models import Department, Course
-from academics.forms import DepartmentForm, CourseForm
+from academics.models import Department, Course, Subject
+from academics.forms import DepartmentForm, CourseForm, SubjectForm
 
 @admin_required
 def dashboard(request):
@@ -419,3 +419,103 @@ def course_delete(request, pk):
         'object_type': 'Course',
         'cancel_url': 'admin_panel:academics_overview',
     })
+
+
+@admin_required
+def subjects_list(request):
+    course_filter = request.GET.get('course_filter', '').strip()
+    search = request.GET.get('search', '').strip()
+
+    subjects = Subject.objects.select_related('course', 'course__department', 'teacher').order_by(
+        'course__department__name', 'course__name', 'semester', 'name'
+    )
+
+    if course_filter:
+        subjects = subjects.filter(course__id=course_filter)
+    if search:
+        subjects = subjects.filter(name__icontains=search) | subjects.filter(code__icontains=search)
+
+    courses = Course.objects.select_related('department').order_by('department__name', 'name')
+
+    course_filter_int = int(course_filter) if course_filter else None
+
+    course_choices = []
+    for course in courses:
+        course_choices.append({
+            'course': course,
+            'is_selected': course.pk == course_filter_int,
+        })
+
+    grouped = {}
+    for subject in subjects:
+        key = subject.course.pk
+        if key not in grouped:
+            grouped[key] = {
+                'course': subject.course,
+                'subjects': [],
+            }
+        grouped[key]['subjects'].append(subject)
+
+    grouped_list = list(grouped.values())
+
+    return render(request, 'admin_panel/subjects_list.html', {
+        'grouped_list': grouped_list,
+        'course_choices': course_choices,
+        'search': search,
+        'course_filter': course_filter,
+        'total_count': sum(len(g['subjects']) for g in grouped_list),
+    })
+
+
+@admin_required
+def subject_add(request):
+    if request.method == 'POST':
+        form = SubjectForm(request.POST)
+        if form.is_valid():
+            subject = form.save()
+            messages.success(request, f'Subject "{subject.name}" created successfully.')
+            return redirect('admin_panel:subjects_list')
+    else:
+        course_pk = request.GET.get('course')
+        initial = {}
+        if course_pk:
+            try:
+                initial['course'] = Course.objects.get(pk=course_pk)
+            except Course.DoesNotExist:
+                pass
+        form = SubjectForm(initial=initial)
+    return render(request, 'admin_panel/subject_form.html', {
+        'form': form,
+        'form_title': 'Add Subject',
+        'submit_label': 'Create Subject',
+    })
+
+
+@admin_required
+def subject_edit(request, pk):
+    subject = get_object_or_404(Subject, pk=pk)
+    if request.method == 'POST':
+        form = SubjectForm(request.POST, instance=subject)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Subject "{subject.name}" updated successfully.')
+            return redirect('admin_panel:subjects_list')
+    else:
+        form = SubjectForm(instance=subject)
+    return render(request, 'admin_panel/subject_form.html', {
+        'form': form,
+        'form_title': f'Edit Subject — {subject.name}',
+        'submit_label': 'Save Changes',
+        'subject': subject,
+    })
+
+
+@admin_required
+def subject_delete(request, pk):
+    subject = get_object_or_404(Subject, pk=pk)
+    if request.method == 'POST':
+        name = subject.name
+        subject.delete()
+        messages.success(request, f'Subject "{name}" deleted successfully.')
+        return redirect('admin_panel:subjects_list')
+    return redirect('admin_panel:subjects_list')

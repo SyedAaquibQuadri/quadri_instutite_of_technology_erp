@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance Report — QIT ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div class="d-flex align-items-center gap-2">
+    <i class="bi bi-bar-chart-line fs-4 text-primary"></i>
+    <h1 class="h4 mb-0 fw-600">Attendance Report</h1>
+  </div>
+  <a href="?dept={{ dept_filter }}&date_from={{ date_from }}&date_to={{ date_to }}&export=pdf"
+     class="btn btn-danger">
+    <i class="bi bi-file-pdf me-1"></i> Export Defaulter List PDF
+  </a>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-500" style="font-size:13px;">Department</label>
+        <select name="dept" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for dept in departments %}
+            <option value="{{ dept.pk }}" {% if dept_filter == dept.pk|stringformat:'s' %}selected{% endif %}>
+              {{ dept.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-500" style="font-size:13px;">From Date</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-500" style="font-size:13px;">To Date</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+        <a href="{% url 'admin_panel:attendance_report' %}" class="btn btn-outline-secondary btn-sm w-100">Clear</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6 fw-600 mb-3">Department-wise Summary</h2>
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered mb-0 align-middle">
+        <thead style="background:#F4F6F9;">
+          <tr>
+            <th>Department</th>
+            <th class="text-center">Total Records</th>
+            <th class="text-center">Present</th>
+            <th class="text-center">Percentage</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in dept_summary %}
+          <tr>
+            <td class="fw-500">{{ row.dept.name }}</td>
+            <td class="text-center">{{ row.total }}</td>
+            <td class="text-center">{{ row.present }}</td>
+            <td class="text-center fw-600"
+                style="color: {% if row.percentage < 75 %}#DC3545{% else %}#1E8A5E{% endif %};">
+              {% if row.total == 0 %}—{% else %}{{ row.percentage }}%{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="text-center text-muted py-3">No departments found.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h2 class="h6 fw-600 mb-0">
+        Defaulter List
+        <span class="badge bg-danger ms-2">{{ defaulter_count }} student{{ defaulter_count|pluralize }}</span>
+      </h2>
+      {% if selected_dept_name %}
+        <span class="text-muted small">Filtered by: {{ selected_dept_name }}</span>
+      {% endif %}
+    </div>
+
+    {% if defaulters %}
+      {% for item in defaulters %}
+      <div class="border rounded mb-3" style="overflow:hidden;">
+        <div class="d-flex align-items-center justify-content-between px-3 py-2"
+             style="background:#FFF5F5; border-bottom:1px solid #F8D7DA;">
+          <div>
+            <span class="fw-600">{{ item.profile.user.get_full_name|default:item.profile.user.username }}</span>
+            <span class="text-muted ms-2 small">{{ item.profile.roll_no }}</span>
+            <span class="badge bg-secondary ms-2" style="font-size:11px;">
+              {{ item.profile.course }} — Sem {{ item.profile.current_semester }}
+            </span>
+          </div>
+          <span class="badge bg-danger">
+            {{ item.subjects|length }} subject{{ item.subjects|length|pluralize }} below 75%
+          </span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered mb-0 align-middle">
+            <thead style="background:#F4F6F9;">
+              <tr>
+                <th class="ps-3">Subject</th>
+                <th class="text-center">Total</th>
+                <th class="text-center">Present</th>
+                <th class="text-center">Percentage</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in item.subjects %}
+              <tr>
+                <td class="ps-3">{{ s.subject.name }}</td>
+                <td class="text-center">{{ s.total }}</td>
+                <td class="text-center">{{ s.present }}</td>
+                <td class="text-center fw-600" style="color:#DC3545;">{{ s.percentage }}%</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-4">
+        <i class="bi bi-check-circle" style="font-size:36px; color:#1E8A5E;"></i>
+        <p class="text-muted mt-2 mb-0">No defaulters found for the selected filters.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

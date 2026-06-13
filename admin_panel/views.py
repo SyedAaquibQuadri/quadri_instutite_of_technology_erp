@@ -8,9 +8,19 @@ from accounts.models import CustomUser, StudentProfile, TeacherProfile
 from academics.models import Department, Course, Subject
 from academics.forms import DepartmentForm, CourseForm, SubjectForm
 import os
+from attendance.models import Attendance
 import uuid
+import json
+from datetime import date
+from django.db.models import Count, Q
+from django.http import HttpResponse
 from attendance.face_utils import encode_face_from_multiple, save_encoding
 from django.conf import settings
+from reportlab.lib.pagesizes import A4 # type: ignore
+from reportlab.lib import colors # type: ignore
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer # type: ignore
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle # type: ignore
+from reportlab.lib.units import cm # type: ignore
 
 @admin_required
 def dashboard(request):
@@ -569,3 +579,167 @@ def enroll_face_view(request, pk):
         'profile': profile,
         'already_enrolled': already_enrolled,
     })
+
+@admin_required
+def attendance_report_view(request):
+    departments = Department.objects.all().order_by('name')
+    dept_filter = request.GET.get('dept', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+
+    attendance_qs = Attendance.objects.all()
+    if date_from:
+        try:
+            attendance_qs = attendance_qs.filter(date__gte=date_from)
+        except Exception:
+            pass
+    if date_to:
+        try:
+            attendance_qs = attendance_qs.filter(date__lte=date_to)
+        except Exception:
+            pass
+
+    dept_summary = []
+    for dept in departments:
+        subjects = Subject.objects.filter(course__department=dept)
+        total = attendance_qs.filter(subject__in=subjects).count()
+        present = attendance_qs.filter(subject__in=subjects, status='Present').count()
+        percentage = round((present / total) * 100, 1) if total > 0 else 0.0
+        dept_summary.append({
+            'dept': dept,
+            'total': total,
+            'present': present,
+            'percentage': percentage,
+        })
+
+    profiles = StudentProfile.objects.select_related(
+        'user', 'course', 'course__department'
+    ).filter(user__is_active=True)
+
+    if dept_filter:
+        profiles = profiles.filter(course__department_id=dept_filter)
+
+    defaulters = []
+    for profile in profiles:
+        subjects = Subject.objects.filter(
+            course=profile.course,
+            semester=profile.current_semester
+        )
+        student_defaulter_subjects = []
+        for subject in subjects:
+            total = attendance_qs.filter(student=profile.user, subject=subject).count()
+            present = attendance_qs.filter(student=profile.user, subject=subject, status='Present').count()
+            percentage = round((present / total) * 100, 1) if total > 0 else None
+            if percentage is not None and percentage < 75:
+                student_defaulter_subjects.append({
+                    'subject': subject,
+                    'total': total,
+                    'present': present,
+                    'percentage': percentage,
+                })
+        if student_defaulter_subjects:
+            defaulters.append({
+                'profile': profile,
+                'subjects': student_defaulter_subjects,
+            })
+
+    if request.GET.get('export') == 'pdf':
+        return generate_defaulter_pdf(defaulters, date_from, date_to, dept_filter, departments)
+
+    selected_dept_name = ''
+    if dept_filter:
+        try:
+            selected_dept_name = Department.objects.get(pk=dept_filter).name
+        except Department.DoesNotExist:
+            pass
+
+    return render(request, 'admin_panel/attendance_report.html', {
+        'departments': departments,
+        'dept_filter': dept_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'dept_summary': dept_summary,
+        'defaulters': defaulters,
+        'selected_dept_name': selected_dept_name,
+        'defaulter_count': len(defaulters),
+    })
+
+
+def generate_defaulter_pdf(defaulters, date_from, date_to, dept_filter, departments):
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="defaulter_list.pdf"'
+
+    doc = SimpleDocTemplate(response, pagesize=A4,
+                            leftMargin=2*cm, rightMargin=2*cm,
+                            topMargin=2*cm, bottomMargin=2*cm)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    title_style = ParagraphStyle('title', parent=styles['Heading1'],
+                                 fontSize=16, textColor=colors.HexColor('#1A73E8'),
+                                 spaceAfter=6)
+    sub_style = ParagraphStyle('sub', parent=styles['Normal'],
+                               fontSize=10, textColor=colors.HexColor('#6C757D'),
+                               spaceAfter=12)
+    section_style = ParagraphStyle('section', parent=styles['Heading2'],
+                                   fontSize=12, textColor=colors.HexColor('#212529'),
+                                   spaceBefore=12, spaceAfter=6)
+
+    elements.append(Paragraph('Quadri Institute of Technology', title_style))
+    elements.append(Paragraph('Attendance Defaulter List (Below 75%)', styles['Heading2']))
+
+    filter_text = ''
+    if date_from or date_to:
+        filter_text += f'Period: {date_from or "Start"} to {date_to or "Today"}   '
+    if dept_filter:
+        try:
+            dname = Department.objects.get(pk=dept_filter).name
+            filter_text += f'Department: {dname}'
+        except Exception:
+            pass
+    if filter_text:
+        elements.append(Paragraph(filter_text, sub_style))
+
+    elements.append(Paragraph(f'Generated on: {date.today().strftime("%d %B %Y")}', sub_style))
+    elements.append(Spacer(1, 0.3*cm))
+
+    if not defaulters:
+        elements.append(Paragraph('No defaulters found for the selected filters.', styles['Normal']))
+    else:
+        for item in defaulters:
+            profile = item['profile']
+            name = profile.user.get_full_name() or profile.user.username
+            elements.append(Paragraph(
+                f'{name} — {profile.roll_no} — {profile.course}  Sem {profile.current_semester}',
+                section_style
+            ))
+
+            table_data = [['Subject', 'Total Classes', 'Present', 'Percentage']]
+            for s in item['subjects']:
+                table_data.append([
+                    s['subject'].name,
+                    str(s['total']),
+                    str(s['present']),
+                    f"{s['percentage']}%",
+                ])
+
+            t = Table(table_data, colWidths=[9*cm, 3*cm, 3*cm, 3*cm])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1A73E8')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F4F6F9')]),
+                ('TEXTCOLOR', (3, 1), (3, -1), colors.HexColor('#DC3545')),
+                ('FONTNAME', (3, 1), (3, -1), 'Helvetica-Bold'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#DEE2E6')),
+                ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ]))
+            elements.append(t)
+            elements.append(Spacer(1, 0.4*cm))
+
+    doc.build(elements)
+    return response

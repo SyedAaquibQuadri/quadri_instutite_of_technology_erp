@@ -27,4 +27,5 @@ urlpatterns = [
     path('academics/subjects/<int:pk>/edit/', views.subject_edit, name='subject_edit'),
     path('academics/subjects/<int:pk>/delete/', views.subject_delete, name='subject_delete'),
     path('students/<int:pk>/enroll-face/', views.enroll_face_view, name='enroll_face'),
+    path('reports/attendance/', views.attendance_report_view, name='attendance_report'),
 ]

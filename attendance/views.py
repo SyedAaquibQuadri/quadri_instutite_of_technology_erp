@@ -16,6 +16,7 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import teacher_required
 from accounts.models import StudentProfile
 from academics.models import Subject
+from attendance.face_utils import load_all_encodings, recognize_faces as fr_recognize
 
 
 @teacher_required
@@ -110,91 +111,38 @@ def recognize_faces_view(request):
     try:
         body = json.loads(request.body)
     except (json.JSONDecodeError, ValueError):
-        return JsonResponse({"error": "Invalid JSON body."}, status=400)
+        return JsonResponse({'error': 'Invalid JSON body.'}, status=400)
 
-    frame_data = body.get("frame", "")
-    subject_id = body.get("subject_id")
+    frame_data = body.get('frame', '')
+    subject_id = body.get('subject_id')
 
     if not frame_data or not subject_id:
-        return JsonResponse({"error": "Missing frame or subject_id."}, status=400)
+        return JsonResponse({'error': 'Missing frame or subject_id.'}, status=400)
 
     try:
-        subject = Subject.objects.select_related("course").get(
-            pk=subject_id, teacher=request.user
-        )
+        subject = Subject.objects.get(pk=subject_id, teacher=request.user)
     except Subject.DoesNotExist:
-        return JsonResponse({"error": "Subject not found or not assigned to you."}, status=403)
+        return JsonResponse({'error': 'Subject not found or not assigned to you.'}, status=403)
 
-    if "," in frame_data:
-        frame_data = frame_data.split(",", 1)[1]
+    if ',' in frame_data:
+        frame_data = frame_data.split(',', 1)[1]
 
     if len(frame_data) > 2_800_000:
-        return JsonResponse({"error": "Frame too large."}, status=413)
+        return JsonResponse({'error': 'Frame too large.'}, status=413)
 
     try:
         img_bytes = base64.b64decode(frame_data)
         np_arr = np.frombuffer(img_bytes, dtype=np.uint8)
         frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         if frame is None:
-            raise ValueError("Could not decode image.")
-    except Exception as e:
-        return JsonResponse({"error": "Invalid image data."}, status=400)
+            raise ValueError('Could not decode image.')
+    except Exception:
+        return JsonResponse({'error': 'Invalid image data.'}, status=400)
 
     try:
-        import face_recognition as fr # type: ignore
-    except ImportError:
-        return JsonResponse(
-            {"error": "face_recognition library not installed.", "matched_students": [], "faces": []},
-            status=200,
-        )
+        all_encodings = load_all_encodings()
+        matched_students, faces_payload = fr_recognize(frame, all_encodings)
+    except Exception as e:
+        return JsonResponse({'error': str(e), 'matched_students': [], 'faces': []}, status=200)
 
-    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    face_locations = fr.face_locations(rgb_frame, model="hog")
-    frame_encodings = fr.face_encodings(rgb_frame, face_locations)
-
-    profiles = StudentProfile.objects.filter(
-        course=subject.course
-    ).select_related("user").exclude(face_encoding__isnull=True).exclude(face_encoding="")
-
-    known_encodings = []
-    known_students = []
-    for profile in profiles:
-        try:
-            enc = np.array(json.loads(profile.face_encoding), dtype=np.float64)
-            known_encodings.append(enc)
-            known_students.append(profile)
-        except (json.JSONDecodeError, ValueError):
-            continue
-
-    matched_students = []
-    faces_payload = []
-
-    for idx, (face_enc, face_loc) in enumerate(zip(frame_encodings, face_locations)):
-        top, right, bottom, left = face_loc
-        box = [int(left), int(top), int(right - left), int(bottom - top)]
-        matched = False
-        matched_name = "Unknown"
-        matched_id = None
-
-        if known_encodings:
-            results = fr.compare_faces(known_encodings, face_enc, tolerance=0.5)
-            face_distances = fr.face_distance(known_encodings, face_enc)
-            best_idx = int(np.argmin(face_distances))
-            if results[best_idx]:
-                profile = known_students[best_idx]
-                matched_name = profile.user.get_full_name() or profile.user.username
-                matched_id = profile.user.pk
-                matched = True
-                if not any(m["student_id"] == matched_id for m in matched_students):
-                    matched_students.append(
-                        {"student_id": matched_id, "name": matched_name}
-                    )
-
-        faces_payload.append(
-            {"box": box, "matched": matched, "name": matched_name}
-        )
-
-    return JsonResponse(
-        {"matched_students": matched_students, "faces": faces_payload},
-        status=200,
-    )
+    return JsonResponse({'matched_students': matched_students, 'faces': faces_payload}, status=200)

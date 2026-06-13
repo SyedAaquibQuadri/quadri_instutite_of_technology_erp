@@ -1,198 +1,241 @@
 {% extends "base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
 
 {% block title %}Mark Attendance{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h4 class="mb-1 fw-600">Mark Attendance</h4>
-        <p class="text-muted mb-0">Select a subject and date to mark attendance</p>
-    </div>
+<div class="d-flex align-items-center gap-2 mb-4">
+  <i class="bi bi-camera-video fs-4 text-primary"></i>
+  <h1 class="h4 mb-0 fw-600">Mark Attendance</h1>
 </div>
 
 {% if messages %}
-{% for message in messages %}
-<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-    {{ message }}
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-{% endfor %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
 {% endif %}
 
-<!-- Step 1: Subject and Date Selection -->
 <div class="card mb-4">
-    <div class="card-body">
-        <h6 class="fw-600 mb-3">
-            <i class="bi bi-filter me-2 text-primary"></i>Select Subject and Date
-        </h6>
-        <form method="post">
-            {% csrf_token %}
-            <div class="row g-3 align-items-end">
-                <div class="col-md-5">
-                    <label class="form-label fw-500">
-                        Subject <span class="text-danger">*</span>
-                    </label>
-                    {{ selection_form.subject }}
-                    {% if selection_form.subject.errors %}
-                    <div class="invalid-feedback d-block">{{ selection_form.subject.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label fw-500">
-                        Date <span class="text-danger">*</span>
-                    </label>
-                    {{ selection_form.date }}
-                    {% if selection_form.date.errors %}
-                    <div class="invalid-feedback d-block">{{ selection_form.date.errors.0 }}</div>
-                    {% endif %}
-                </div>
-                <div class="col-md-3">
-                    <button type="submit" name="load_students" class="btn btn-primary w-100">
-                        <i class="bi bi-people me-2"></i>Load Students
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Step 2: Student Attendance Table -->
-{% if subject %}
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <div>
-            <h6 class="mb-0 fw-600">
-                <i class="bi bi-clipboard-check me-2 text-primary"></i>
-                {{ subject.name }} — {{ subject.code }}
-            </h6>
-            <small class="text-muted">
-                {{ subject.course.name }} | Semester {{ subject.semester }} | Date: {{ date }}
-            </small>
-        </div>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-success" id="markAllPresent">
-                <i class="bi bi-check-all me-1"></i>All Present
-            </button>
-            <button type="button" class="btn btn-sm btn-danger" id="markAllAbsent">
-                <i class="bi bi-x-circle me-1"></i>All Absent
-            </button>
-        </div>
-    </div>
-
-    {% if students %}
+  <div class="card-body">
+    <h2 class="h6 fw-600 mb-3">Select Subject and Date</h2>
     <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="subject_id" value="{{ subject.id }}">
-        <input type="hidden" name="date" value="{{ date }}">
-
-        <div class="table-responsive">
-            <table class="table table-hover table-bordered mb-0">
-                <thead>
-                    <tr style="background-color: var(--bs-gray-100);">
-                        <th style="width:60px;">#</th>
-                        <th>Roll No</th>
-                        <th>Student Name</th>
-                        <th class="text-center">Present</th>
-                        <th class="text-center">Absent</th>
-                        <th class="text-center">Late</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for student in students %}
-                    <tr class="attendance-row" data-student-id="{{ student.id }}">
-                        <td class="text-muted">{{ forloop.counter }}</td>
-                        <td class="fw-500">{{ student.studentprofile.roll_no }}</td>
-                        <td>{{ student.get_full_name }}</td>
-
-                        <!-- Present Radio -->
-                        <td class="text-center">
-                            <input type="radio" class="form-check-input attendance-radio" name="status_{{ student.id }}"
-                                value="Present" {% if student.attendance_status == 'Present' %}checked{% endif %}>
-                        </td>
-
-                        <!-- Absent Radio -->
-                        <td class="text-center">
-                            <input type="radio" class="form-check-input attendance-radio" name="status_{{ student.id }}"
-                                value="Absent" {% if student.attendance_status == 'Absent' %}checked{% endif %}>
-                        </td>
-
-                        <!-- Late Radio -->
-                        <td class="text-center">
-                            <input type="radio" class="form-check-input attendance-radio" name="status_{{ student.id }}"
-                                value="Late" {% if student.attendance_status == 'Late' %}checked{% endif %}>
-                        </td>
-
-                        <!-- Badge Status (This part was already correct) -->
-                        <td>
-                            <span class="badge
-            {% if student.attendance_status == 'Present' %}bg-success
-            {% elif student.attendance_status == 'Absent' %}bg-danger
-            {% elif student.attendance_status == 'Late' %}bg-warning text-dark
-            {% endif %}">
-                                {{ student.attendance_status }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="load_students">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-5">
+          {{ form.subject|as_crispy_field }}
         </div>
-
-        <div class="card-footer d-flex justify-content-between align-items-center">
-            <span class="text-muted">
-                <i class="bi bi-info-circle me-1"></i>
-                Total Students: {{ students|length }}
-            </span>
-            <button type="submit" name="submit_attendance" class="btn btn-primary px-4">
-                <i class="bi bi-check-circle me-2"></i>Save Attendance
-            </button>
+        <div class="col-md-4">
+          {{ form.date|as_crispy_field }}
         </div>
+        <div class="col-md-3">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-people me-1"></i> Load Students
+          </button>
+        </div>
+      </div>
     </form>
-
-    {% else %}
-    <div class="card-body text-center py-5">
-        <i class="bi bi-people display-4 text-muted"></i>
-        <p class="text-muted mt-3">No students enrolled for this subject and semester.</p>
-    </div>
-    {% endif %}
+  </div>
 </div>
+
+{% if students %}
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+      <h2 class="h6 fw-600 mb-0">
+        <i class="bi bi-camera me-1 text-primary"></i>
+        Face Recognition
+      </h2>
+      <span id="recognition-status" class="badge bg-secondary text-white">Idle</span>
+    </div>
+
+    <div id="manual-fallback-notice" class="alert alert-warning d-none mb-3" role="alert">
+      <i class="bi bi-exclamation-triangle me-1"></i>
+      Webcam not available. Please mark attendance manually below.
+    </div>
+
+    <div class="webcam-wrapper position-relative mb-3"
+         style="width:640px; max-width:100%; background:#000; border-radius:8px; overflow:hidden; border:2px solid var(--bs-border-color);">
+      <video id="webcam-feed"
+             width="640"
+             height="480"
+             style="display:block; max-width:100%;"
+             autoplay
+             muted
+             playsinline></video>
+      <canvas id="webcam-canvas"
+              width="640"
+              height="480"
+              style="position:absolute; top:0; left:0; max-width:100%; pointer-events:none;"></canvas>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button id="start-recognition"
+              class="btn btn-primary"
+              data-recognize-url="{% url 'attendance:recognize_faces' %}"
+              data-subject-id="{{ selected_subject.pk }}">
+        <i class="bi bi-camera-video me-1"></i> Start Face Recognition
+      </button>
+      <button id="stop-recognition" class="btn btn-outline-secondary" disabled>
+        <i class="bi bi-stop-circle me-1"></i> Stop
+      </button>
+    </div>
+  </div>
+</div>
+
+<form method="post" id="attendance-form">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="submit_attendance">
+  <input type="hidden" name="subject_id" value="{{ selected_subject.pk }}">
+  <input type="hidden" name="date" value="{{ selected_date|date:'Y-m-d' }}">
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h2 class="h6 fw-600 mb-0">
+          Student Attendance &mdash; {{ selected_subject.name }} &mdash; {{ selected_date|date:"d M Y" }}
+        </h2>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-success" id="all-present-btn">
+            <i class="bi bi-check-all me-1"></i> All Present
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-danger" id="all-absent-btn">
+            <i class="bi bi-x-circle me-1"></i> All Absent
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover table-bordered align-middle mb-0">
+          <thead style="background:#F4F6F9;">
+            <tr>
+              <th style="width:80px;">Roll No</th>
+              <th>Name</th>
+              <th style="width:300px;">Status</th>
+              <th style="width:120px;">Auto Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for student in students %}
+            <tr data-student-id="{{ student.pk }}">
+              <td class="text-muted small">{{ student.student_profile.roll_no }}</td>
+              <td class="fw-500">{{ student.get_full_name|default:student.username }}</td>
+              <td>
+                <div class="d-flex gap-3">
+                  <div class="form-check">
+                    <input class="form-check-input status-radio"
+                           type="radio"
+                           name="status_{{ student.pk }}"
+                           id="present_{{ student.pk }}"
+                           value="Present"
+                           {% if student.attendance_status == 'Present' %}checked{% endif %}>
+                    <label class="form-check-label text-success fw-500" for="present_{{ student.pk }}">
+                      Present
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input status-radio"
+                           type="radio"
+                           name="status_{{ student.pk }}"
+                           id="absent_{{ student.pk }}"
+                           value="Absent"
+                           {% if student.attendance_status == 'Absent' or not student.attendance_status %}checked{% endif %}>
+                    <label class="form-check-label text-danger fw-500" for="absent_{{ student.pk }}">
+                      Absent
+                    </label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input status-radio"
+                           type="radio"
+                           name="status_{{ student.pk }}"
+                           id="late_{{ student.pk }}"
+                           value="Late"
+                           {% if student.attendance_status == 'Late' %}checked{% endif %}>
+                    <label class="form-check-label text-warning fw-500" for="late_{{ student.pk }}">
+                      Late
+                    </label>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge bg-secondary status-pill">—</span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4">
+                No students enrolled for this subject and semester.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end">
+    <a href="{% url 'attendance:mark_attendance' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+    <button type="submit" class="btn btn-primary px-4">
+      <i class="bi bi-check-circle me-1"></i> Submit Attendance
+    </button>
+  </div>
+</form>
+
 {% endif %}
+{% endblock %}
 
+{% block extra_js %}
 <script>
-    document.getElementById('markAllPresent') && document.getElementById('markAllPresent').addEventListener('click', function () {
-        document.querySelectorAll('input[type="radio"][value="Present"]').forEach(function (radio) {
-            radio.checked = true;
-            updateBadge(radio);
-        });
-    });
+  document.addEventListener("DOMContentLoaded", function () {
+    var allPresentBtn = document.getElementById("all-present-btn");
+    var allAbsentBtn = document.getElementById("all-absent-btn");
 
-    document.getElementById('markAllAbsent') && document.getElementById('markAllAbsent').addEventListener('click', function () {
-        document.querySelectorAll('input[type="radio"][value="Absent"]').forEach(function (radio) {
-            radio.checked = true;
-            updateBadge(radio);
+    if (allPresentBtn) {
+      allPresentBtn.addEventListener("click", function () {
+        document.querySelectorAll('input[value="Present"]').forEach(function (r) {
+          r.checked = true;
+          r.dispatchEvent(new Event("change"));
         });
-    });
-
-    document.querySelectorAll('.attendance-radio').forEach(function (radio) {
-        radio.addEventListener('change', function () {
-            updateBadge(this);
-        });
-    });
-
-    function updateBadge(radio) {
-        var row = radio.closest('tr');
-        var badge = row.querySelector('.badge');
-        var status = radio.value;
-        badge.className = 'badge';
-        if (status === 'Present') {
-            badge.classList.add('bg-success');
-        } else if (status === 'Absent') {
-            badge.classList.add('bg-danger');
-        } else if (status === 'Late') {
-            badge.classList.add('bg-warning', 'text-dark');
-        }
-        badge.textContent = status;
+      });
     }
+
+    if (allAbsentBtn) {
+      allAbsentBtn.addEventListener("click", function () {
+        document.querySelectorAll('input[value="Absent"]').forEach(function (r) {
+          r.checked = true;
+          r.dispatchEvent(new Event("change"));
+        });
+      });
+    }
+
+    document.querySelectorAll(".status-radio").forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        var row = this.closest("tr");
+        var pill = row ? row.querySelector(".status-pill") : null;
+        if (!pill) return;
+        if (this.value === "Present") {
+          pill.textContent = "Present";
+          pill.className = "badge bg-success status-pill";
+        } else if (this.value === "Absent") {
+          pill.textContent = "Absent";
+          pill.className = "badge bg-danger status-pill";
+        } else if (this.value === "Late") {
+          pill.textContent = "Late";
+          pill.className = "badge bg-warning text-dark status-pill";
+        }
+      });
+    });
+  });
 </script>
+{% if students %}
+<script src="{% static 'js/face_recognition.js' %}"></script>
+{% endif %}
 {% endblock %}

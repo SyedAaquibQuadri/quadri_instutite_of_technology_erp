@@ -222,3 +222,28 @@ class TeacherEditForm(forms.Form):
         if qs.exists():
             raise forms.ValidationError('This employee ID is already assigned.')
         return employee_id
+    
+
+class FaceEnrollmentForm(forms.Form):
+    image1 = forms.ImageField(label='Photo 1')
+    image2 = forms.ImageField(label='Photo 2')
+    image3 = forms.ImageField(label='Photo 3')
+    image4 = forms.ImageField(required=False, label='Photo 4 (optional)')
+    image5 = forms.ImageField(required=False, label='Photo 5 (optional)')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        images = [
+            cleaned_data.get('image1'),
+            cleaned_data.get('image2'),
+            cleaned_data.get('image3'),
+            cleaned_data.get('image4'),
+            cleaned_data.get('image5'),
+        ]
+        valid = [img for img in images if img]
+        if len(valid) < 3:
+            raise forms.ValidationError('Please upload at least 3 photos.')
+        for img in valid:
+            if img.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('Each photo must be under 10MB.')
+        return cleaned_data

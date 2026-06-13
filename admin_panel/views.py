@@ -3,10 +3,14 @@ from django.contrib import messages
 from django.db import transaction
 from django.core.paginator import Paginator
 from accounts.decorators import admin_required
-from accounts.forms import StudentCreationForm, StudentEditForm, TeacherCreationForm, TeacherEditForm
+from accounts.forms import StudentCreationForm, StudentEditForm, TeacherCreationForm, TeacherEditForm, FaceEnrollmentForm
 from accounts.models import CustomUser, StudentProfile, TeacherProfile
 from academics.models import Department, Course, Subject
 from academics.forms import DepartmentForm, CourseForm, SubjectForm
+import os
+import uuid
+from attendance.face_utils import encode_face_from_multiple, save_encoding
+from django.conf import settings
 
 @admin_required
 def dashboard(request):
@@ -519,3 +523,49 @@ def subject_delete(request, pk):
         messages.success(request, f'Subject "{name}" deleted successfully.')
         return redirect('admin_panel:subjects_list')
     return redirect('admin_panel:subjects_list')
+
+@admin_required
+def enroll_face_view(request, pk):
+    student = get_object_or_404(CustomUser, pk=pk, role='student')
+    profile = get_object_or_404(StudentProfile, user=student)
+    already_enrolled = bool(profile.face_encoding)
+
+    if request.method == 'POST':
+        form = FaceEnrollmentForm(request.POST, request.FILES)
+        if form.is_valid():
+            image_fields = ['image1', 'image2', 'image3', 'image4', 'image5']
+            saved_paths = []
+            enroll_dir = os.path.join(settings.MEDIA_ROOT, 'face_images', str(student.pk))
+            os.makedirs(enroll_dir, exist_ok=True)
+
+            for field in image_fields:
+                img = form.cleaned_data.get(field)
+                if img:
+                    ext = os.path.splitext(img.name)[1].lower()
+                    filename = f"{uuid.uuid4().hex}{ext}"
+                    path = os.path.join(enroll_dir, filename)
+                    with open(path, 'wb+') as f:
+                        for chunk in img.chunks():
+                            f.write(chunk)
+                    saved_paths.append(path)
+
+            encoding = encode_face_from_multiple(saved_paths)
+
+            if encoding is None:
+                messages.error(request, 'No face detected in the uploaded photos. Please upload clear front-facing photos.')
+            else:
+                success = save_encoding(student.pk, encoding)
+                if success:
+                    messages.success(request, f'Face enrolled successfully for {student.get_full_name() or student.username}.')
+                    return redirect('admin_panel:students_list')
+                else:
+                    messages.error(request, 'Failed to save encoding. Student profile not found.')
+    else:
+        form = FaceEnrollmentForm()
+
+    return render(request, 'admin_panel/enroll_face.html', {
+        'form': form,
+        'student': student,
+        'profile': profile,
+        'already_enrolled': already_enrolled,
+    })

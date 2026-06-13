@@ -65,6 +65,10 @@
                                 class="btn btn-sm btn-outline-primary me-1" title="Edit">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            <a href="{% url 'admin_panel:enroll_face' sp.user.pk %}"
+                                class="btn btn-sm btn-outline-info me-1" title="Enroll Face">
+                                <i class="bi bi-person-bounding-box"></i>
+                            </a>
                             {% if sp.user.is_active %}
                             <form method="post" action="{% url 'admin_panel:student_deactivate' sp.pk %}"
                                 class="d-inline"

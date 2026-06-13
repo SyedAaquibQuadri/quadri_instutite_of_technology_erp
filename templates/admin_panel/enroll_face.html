@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Enroll Face — {{ student.get_full_name|default:student.username }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <i class="bi bi-person-bounding-box fs-4 text-primary"></i>
+  <h1 class="h4 mb-0 fw-600">Face Enrollment</h1>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-body text-center">
+        {% if student.profile_pic %}
+          <img src="{{ student.profile_pic.url }}" class="rounded-circle mb-3"
+               style="width:80px;height:80px;object-fit:cover;">
+        {% else %}
+          <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3"
+               style="width:80px;height:80px;">
+            <i class="bi bi-person-fill text-white fs-3"></i>
+          </div>
+        {% endif %}
+        <h2 class="h6 fw-600 mb-1">{{ student.get_full_name|default:student.username }}</h2>
+        <p class="text-muted small mb-2">{{ profile.roll_no }}</p>
+        {% if already_enrolled %}
+          <span class="badge bg-success">
+            <i class="bi bi-check-circle me-1"></i> Face Enrolled
+          </span>
+        {% else %}
+          <span class="badge bg-warning text-dark">
+            <i class="bi bi-exclamation-circle me-1"></i> Not Enrolled
+          </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-body">
+        <h3 class="h6 fw-600 mb-3">
+          <i class="bi bi-info-circle me-1 text-primary"></i> Photo Guidelines
+        </h3>
+        <ul class="list-unstyled small text-muted mb-0" style="line-height:2;">
+          <li><i class="bi bi-check2 text-success me-1"></i> Clear front-facing photos</li>
+          <li><i class="bi bi-check2 text-success me-1"></i> Good lighting conditions</li>
+          <li><i class="bi bi-check2 text-success me-1"></i> Only one face per photo</li>
+          <li><i class="bi bi-check2 text-success me-1"></i> JPG or PNG format</li>
+          <li><i class="bi bi-check2 text-success me-1"></i> Maximum 10MB per photo</li>
+          <li><i class="bi bi-x text-danger me-1"></i> No sunglasses or masks</li>
+          <li><i class="bi bi-x text-danger me-1"></i> No group photos</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body">
+        <h2 class="h6 fw-600 mb-4">
+          {% if already_enrolled %}Re-enroll Face{% else %}Upload Face Photos{% endif %}
+        </h2>
+
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              {{ form.image1|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.image2|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.image3|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.image4|as_crispy_field }}
+            </div>
+            <div class="col-md-6">
+              {{ form.image5|as_crispy_field }}
+            </div>
+          </div>
+
+          <div id="preview-row" class="row g-2 mt-3" style="display:none!important;"></div>
+
+          {% if already_enrolled %}
+            <div class="alert alert-warning mt-3 mb-0" role="alert">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              This student already has a face enrolled. Submitting will overwrite the existing encoding.
+            </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-person-check me-1"></i>
+              {% if already_enrolled %}Re-enroll Face{% else %}Enroll Face{% endif %}
+            </button>
+            <a href="{% url 'admin_panel:students_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-arrow-left me-1"></i> Back to Students
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var inputs = document.querySelectorAll('input[type="file"]');
+    inputs.forEach(function (input) {
+      input.addEventListener('change', function () {
+        if (this.files && this.files[0]) {
+          var reader = new FileReader();
+          var inputEl = this;
+          reader.onload = function (e) {
+            var existing = inputEl.parentElement.querySelector('.img-preview');
+            if (existing) existing.remove();
+            var img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'img-preview mt-2 rounded';
+            img.style.cssText = 'width:100%;max-height:160px;object-fit:cover;border:1px solid var(--bs-border-color);';
+            inputEl.parentElement.appendChild(img);
+          };
+          reader.readAsDataURL(this.files[0]);
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}

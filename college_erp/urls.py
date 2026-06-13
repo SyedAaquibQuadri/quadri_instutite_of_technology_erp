@@ -31,6 +31,7 @@ urlpatterns = [
     path('library/', include('library.urls')),
     path('materials/', include('materials.urls')),
     path('notices/', include('notices.urls')),
+    path('student/attendance/', include('attendance.urls', namespace='student_attendance')),
 ]
 
 if settings.DEBUG:

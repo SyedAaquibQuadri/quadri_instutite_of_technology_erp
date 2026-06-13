@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}My Attendance — QIT ERP{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-2 mb-4">
+  <i class="bi bi-calendar-check fs-4 text-primary"></i>
+  <h1 class="h4 mb-0 fw-600">My Attendance</h1>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% if subjects_data %}
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6 fw-600 mb-3">
+      <i class="bi bi-bar-chart-horizontal me-1 text-primary"></i>
+      Subject-wise Attendance
+    </h2>
+    <canvas id="attendanceChart" height="120"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-bordered mb-0 align-middle">
+        <thead style="background:#F4F6F9;">
+          <tr>
+            <th class="ps-3">Subject</th>
+            <th class="text-center">Total Classes</th>
+            <th class="text-center">Present</th>
+            <th class="text-center">Absent</th>
+            <th class="text-center">Late</th>
+            <th class="text-center">Percentage</th>
+            <th class="text-center">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in subjects_data %}
+          <tr {% if row.is_low %}style="background:#FFF5F5;"{% endif %}>
+            <td class="ps-3">
+              <span class="fw-500">{{ row.subject.name }}</span>
+              <br>
+              <span class="text-muted small">{{ row.subject.code }}</span>
+            </td>
+            <td class="text-center">{{ row.total }}</td>
+            <td class="text-center">
+              <span class="badge bg-success">{{ row.present }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-danger">{{ row.absent }}</span>
+            </td>
+            <td class="text-center">
+              <span class="badge bg-warning text-dark">{{ row.late }}</span>
+            </td>
+            <td class="text-center fw-600"
+                style="color: {% if row.is_low %}#DC3545{% else %}#1E8A5E{% endif %};">
+              {{ row.percentage }}%
+            </td>
+            <td class="text-center">
+              {% if row.total == 0 %}
+                <span class="badge bg-secondary">No Data</span>
+              {% elif row.is_low %}
+                <span class="badge bg-danger">
+                  <i class="bi bi-exclamation-triangle me-1"></i> Low
+                </span>
+              {% else %}
+                <span class="badge bg-success">
+                  <i class="bi bi-check-circle me-1"></i> Good
+                </span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="card-body text-center py-5">
+    <i class="bi bi-calendar-x" style="font-size:40px; color:#DEE2E6;"></i>
+    <p class="text-muted mt-3 mb-0">No attendance records found for your current semester.</p>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+{% if subjects_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var labels = {{ chart_labels|safe }};
+    var values = {{ chart_values|safe }};
+    var colors = {{ chart_colors|safe }};
+
+    new Chart(document.getElementById('attendanceChart'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Attendance %',
+          data: values,
+          backgroundColor: colors,
+          borderRadius: 6,
+          borderSkipped: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            min: 0,
+            max: 100,
+            ticks: {
+              callback: function (val) { return val + '%'; }
+            },
+            grid: { color: '#DEE2E6' }
+          },
+          y: {
+            grid: { display: false }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function (ctx) { return ctx.parsed.x + '%'; }
+            }
+          }
+        }
+      }
+    });
+  });
+</script>
+{% endif %}
+{% endblock %}

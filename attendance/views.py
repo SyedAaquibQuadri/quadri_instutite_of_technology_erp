@@ -13,11 +13,11 @@ import numpy as np # type: ignore
 import cv2 # type: ignore
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from accounts.decorators import teacher_required
+from accounts.decorators import teacher_required, student_required
 from accounts.models import StudentProfile
 from academics.models import Subject
 from attendance.face_utils import load_all_encodings, recognize_faces as fr_recognize
-
+from attendance.models import Attendance
 
 @teacher_required
 def mark_attendance(request):
@@ -146,3 +146,69 @@ def recognize_faces_view(request):
         return JsonResponse({'error': str(e), 'matched_students': [], 'faces': []}, status=200)
 
     return JsonResponse({'matched_students': matched_students, 'faces': faces_payload}, status=200)
+
+@student_required
+def student_attendance_view(request):
+    student = request.user
+    try:
+        profile = student.student_profile
+    except Exception:
+        profile = None
+
+    if not profile:
+        return render(request, 'attendance/student_attendance.html', {
+            'subjects_data': [],
+            'chart_labels': '[]',
+            'chart_values': '[]',
+            'chart_colors': '[]',
+        })
+
+    subjects = Subject.objects.filter(
+        course=profile.course,
+        semester=profile.current_semester
+    ).select_related('teacher')
+
+    subjects_data = []
+    chart_labels = []
+    chart_values = []
+    chart_colors = []
+
+    for subject in subjects:
+        total = Attendance.objects.filter(
+            student=student, subject=subject
+        ).count()
+        present = Attendance.objects.filter(
+            student=student, subject=subject, status='Present'
+        ).count()
+        absent = Attendance.objects.filter(
+            student=student, subject=subject, status='Absent'
+        ).count()
+        late = Attendance.objects.filter(
+            student=student, subject=subject, status='Late'
+        ).count()
+
+        percentage = round((present / total) * 100, 1) if total > 0 else 0.0
+        is_low = percentage < 75
+
+        subjects_data.append({
+            'subject': subject,
+            'total': total,
+            'present': present,
+            'absent': absent,
+            'late': late,
+            'percentage': percentage,
+            'is_low': is_low,
+        })
+
+        chart_labels.append(subject.name)
+        chart_values.append(percentage)
+        chart_colors.append('#DC3545' if is_low else '#1E8A5E')
+
+    import json
+    return render(request, 'attendance/student_attendance.html', {
+        'subjects_data': subjects_data,
+        'chart_labels': json.dumps(chart_labels),
+        'chart_values': json.dumps(chart_values),
+        'chart_colors': json.dumps(chart_colors),
+        'profile': profile,
+    })
